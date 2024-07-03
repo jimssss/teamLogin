@@ -76,6 +76,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Enable CORS
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允許的來源
+    allow_credentials=True,
+    allow_methods=["*"],  # 允許所有 HTTP 方法
+    allow_headers=["*"],  # 允許所有標頭
+)
+
 # create user data
 def create_user_data(email, password):
     session = SessionLocal()
@@ -117,15 +127,7 @@ create_user_data(user_key, "secret")
 
 
 
-# Enable CORS
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 允許的來源
-    allow_credentials=False,
-    allow_methods=["*"],  # 允許所有 HTTP 方法
-    allow_headers=["*"],  # 允許所有標頭
-)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -207,7 +209,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta()
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
@@ -248,4 +250,4 @@ async def read_users_me(request: Request):
     return {"email": username}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5000)

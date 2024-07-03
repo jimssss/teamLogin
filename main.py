@@ -23,7 +23,7 @@ load_dotenv()
 # Constants
 SECRET_KEY = os.getenv("LOGIN_SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # GCP MySQL instance connection settings
 INSTANCE_CONNECTION_NAME =os.getenv("INSTANCE_CONNECTION_NAME")
@@ -187,6 +187,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
+def process_bearer_token(authorization: str) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header is missing")
+    
+    parts = authorization.split()
+    
+    if parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid authorization header. Must start with 'Bearer'")
+    elif len(parts) == 1:
+        raise HTTPException(status_code=401, detail="Token missing")
+    elif len(parts) > 2:
+        raise HTTPException(status_code=401, detail="Invalid authorization header. Token contains spaces")
+
+    token = parts[1].strip()
+    return token
+
 @app.get("/")
 async def read_sample_page():
     return FileResponse('login.html')
@@ -209,10 +225,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token_expires = timedelta()
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
+    
+    access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -233,6 +247,7 @@ async def read_users_me(request: Request):
             headers={"WWW-Authenticate": "Bearer"}
         )
     try:
+        token = process_bearer_token(token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
@@ -241,12 +256,13 @@ async def read_users_me(request: Request):
                 detail="Not authenticated",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
     return {"email": username}
 
 if __name__ == "__main__":

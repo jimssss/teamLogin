@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Sign In</h2>
+      </div>
+      <form id="loginForm">
+        <div class="mb-4">
+          <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+        <div class="mb-4">
+          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Sign In
+        </button>
+      </form>
+      <div class="mt-6 flex justify-between text-sm">
+        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Forgot password?</a>
+        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500" onclick="showRegisterForm()">Don't have an account? Sign Up</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="registerFormContainer" class="hidden flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Sign Up</h2>
+      </div>
+      <form id="registerForm">
+        <div class="mb-4">
+          <label for="registerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
+          <input
+            type="email"
+            id="registerEmail"
+            name="email"
+            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+        <div class="mb-4">
+          <label for="registerPassword" class="block text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            id="registerPassword"
+            name="password"
+            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Sign Up
+        </button>
+      </form>
+      <div class="mt-6 flex justify-between text-sm">
+        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500" onclick="showLoginForm()">Already have an account? Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://storage.cloud.google.com/jim_team_client0702/script.js"></script>
+</body>
+</html>

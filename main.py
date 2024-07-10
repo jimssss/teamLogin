@@ -130,9 +130,6 @@ def search_user_data(email) -> dict | None:
     finally:
         session.close()
 
-#create a user data
-user_key = "abc@abc.com"
-create_user_data(user_key, "secret")
 
 
 
@@ -221,10 +218,6 @@ async def read_sample_page():
 @app.get("/script.js",include_in_schema=False)
 async def get_script():
     return FileResponse('script.js')
-
-@app.get("/btn_login_base.png", include_in_schema=False)
-async def favicon():
-    return FileResponse("favicon.ico")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -363,7 +356,7 @@ async def line_callback(request:Request,code: str, state: str, friendship_status
     request.session['access_token'] = access_token
     return RedirectResponse(url=AFTERLINE_URI)
 
-@app.get("/get-linetoken")
+@app.get("/get-linetoken",include_in_schema=False)
 async def get_token(request: Request):
     access_token = request.session.get('access_token')
     if not access_token:

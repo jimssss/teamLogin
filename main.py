@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends, Body,Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse,RedirectResponse
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from werkzeug.security import generate_password_hash, check_password_hash
 import uvicorn
@@ -13,6 +14,8 @@ from sqlalchemy import create_engine, Column, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import asynccontextmanager
+ 
+import httpx
 
 import os
 from dotenv import load_dotenv
@@ -59,6 +62,7 @@ class User_Db(Base):
     __tablename__ = "users"
     email = Column(String(255), primary_key=True, unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    line_name=Column(String(255),nullable=True,default=None)
 
 # create the database table
 Base.metadata.create_all(bind=pool)
@@ -76,6 +80,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# 設置會話中間件，確保會話能夠工作
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+
 # Enable CORS
 
 app.add_middleware(
@@ -92,7 +99,8 @@ def create_user_data(email, password):
     try:
         user_data = User_Db(
             email=email,
-            hashed_password=generate_password_hash(password)
+            hashed_password=generate_password_hash(password),
+            line_name=None
         )
         existing_user = search_user_data(email)
         if existing_user:
@@ -116,6 +124,7 @@ def search_user_data(email) -> dict | None:
             return {
                 "email": queried_user.email,
                 "hashed_password": queried_user.hashed_password,
+                "line_name": queried_user.line_name
             }
         return None
     finally:
@@ -133,6 +142,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class User(BaseModel):
     email: str
+    line_name: str|None
+
 
 class UserInDB(User):
     hashed_password: str
@@ -207,9 +218,13 @@ def process_bearer_token(authorization: str) -> str:
 async def read_sample_page():
     return FileResponse('login.html')
 
-@app.get("/script.js")
+@app.get("/script.js",include_in_schema=False)
 async def get_script():
     return FileResponse('script.js')
+
+@app.get("/btn_login_base.png", include_in_schema=False)
+async def favicon():
+    return FileResponse("favicon.ico")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -232,6 +247,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @app.post("/register")
 async def register(email: str = Body(...), password: str = Body(...)):
+    print(email,password)
     if search_user_data(email):
         raise HTTPException(status_code=400, detail="Email already registered")
     create_user_data(email, password)
@@ -249,8 +265,11 @@ async def read_users_me(request: Request):
     try:
         token = process_bearer_token(token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        print(payload)
+        useremail = payload.get("sub")
+        username = payload.get("line_name")
+        print(useremail,username)
+        if useremail is None:
             raise HTTPException(
                 status_code=401,
                 detail="Not authenticated",
@@ -263,7 +282,94 @@ async def read_users_me(request: Request):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    return {"email": username}
+    return {"line_name": username,"email": useremail}
+
+#login from line 
+# use line id as login password
+# 這些應該存儲在環境變量中
+LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+LINE_REDIRECT_URI = os.getenv("LINE_REDIRECT_URI")
+AFTERLINE_URI = os.getenv("AFTERLINE_URI")
+
+class LineTokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    refresh_token: str
+    expires_in: int
+    scope: str
+    id_token: str
+
+@app.get("/linelogin")
+async def line_login():
+    auth_url = f"https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id={LINE_CHANNEL_ID}&redirect_uri={LINE_REDIRECT_URI}&state=12345abcde&scope=profile%20openid%20email"
+    return RedirectResponse(auth_url)
+
+@app.get("/callback")
+async def line_callback(request:Request,code: str, state: str, friendship_status_changed: str = None):
+    # 驗證state參數（防止CSRF攻擊）
+    if state != "12345abcde":
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+
+    # 如果用戶取消授權，則不會返回code參數
+    if not code:
+        raise HTTPException(status_code=400, detail="Authorization failed")
+
+    token_url = "https://api.line.me/oauth2/v2.1/token"
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": LINE_REDIRECT_URI,
+        "client_id": LINE_CHANNEL_ID,
+        "client_secret": LINE_CHANNEL_SECRET
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(token_url, data=data, headers=headers)
+    
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail=f"Failed to get access token: {response.text}")
+    
+    token_data = LineTokenResponse(**response.json())
+    print("first time re",token_data)
+    user_info_url = "https://api.line.me/oauth2/v2.1/verify"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "id_token": token_data.id_token,
+        "client_id": LINE_CHANNEL_ID
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(user_info_url,data=data, headers=headers)
+    
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+    
+    user_info = response.json()
+    print(user_info)
+    user_line_name = user_info.get("name")
+    user_line_email = user_info.get("email")
+    user_line_id = user_info.get("sub")
+
+    if user_line_email is None:
+        return {"error": "Email not provided by LINE. Please register a new account directly."}
+    
+    if search_user_data(user_line_email) is None:
+        await register(email=user_line_email, password=user_line_id)
+    
+    access_token=create_access_token(data={"sub": user_line_email,"line_name":user_line_name})
+    request.session['access_token'] = access_token
+    return RedirectResponse(url=AFTERLINE_URI)
+
+@app.get("/get-linetoken")
+async def get_token(request: Request):
+    access_token = request.session.get('access_token')
+    if not access_token:
+        raise HTTPException(status_code=404, detail="Token not found in session")
+    return {"access_token": access_token,"token_type": "bearer"}
+    
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=5500)

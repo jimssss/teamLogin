@@ -1,4 +1,5 @@
-const apiURL=" https://my-loginapp2-qo754edula-uc.a.run.app";
+// const apiURL=" https://my-loginapp2-qo754edula-uc.a.run.app";
+const apiURL="";
 document.getElementById('loginForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const email = document.getElementById('email').value;
@@ -58,3 +59,44 @@ function showLoginForm() {
   document.getElementById('registerFormContainer').classList.add('hidden');
   document.getElementById('loginForm').closest('.flex').classList.remove('hidden');
 }
+
+async function lineLogin() {
+  window.location.href = apiURL+'/linelogin';
+}
+async function lineLogin() {
+  // 觸發 LINE Login 流程
+  window.location.href = apiURL + '/linelogin';
+}
+
+async function getLineToken() {
+  try {
+      const response = await fetch(apiURL + '/get-linetoken', {
+          method: 'GET',
+          credentials: 'include'  // 確保 cookie/session 夾帶在請求中
+      });
+
+      if (response.ok) {
+          const data = await response.json();
+          if (data.access_token) {
+              // 將 access token 儲存到 localStorage
+              localStorage.setItem('access_token', data.access_token);
+              console.log('access token:', data.access_token);
+              // 你可以在這裡進行後續操作，如重定向到其他頁面
+          } else {
+              console.error('Access token not found in response');
+          }
+      } else {
+          console.error('Failed to get access token:', response.statusText);
+      }
+  } catch (error) {
+      console.error('Error fetching access token:', error);
+  }
+}
+
+// 檢查 URL 是否包含 token 參數，如果有則執行 getToken
+document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('linetoken')) {
+      getLineToken();
+  }
+});

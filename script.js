@@ -1,5 +1,7 @@
-// const apiURL=" https://my-loginapp2-qo754edula-uc.a.run.app";
 const apiURL="";
+
+
+// const apiURL=" https://my-loginapp2-qo754edula-uc.a.run.app";
 document.getElementById('loginForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const email = document.getElementById('email').value;
@@ -63,10 +65,6 @@ function showLoginForm() {
 async function lineLogin() {
   window.location.href = apiURL+'/linelogin';
 }
-async function lineLogin() {
-  // 觸發 LINE Login 流程
-  window.location.href = apiURL + '/linelogin';
-}
 
 async function getLineToken() {
   try {
@@ -81,7 +79,7 @@ async function getLineToken() {
               // 將 access token 儲存到 localStorage
               localStorage.setItem('access_token', data.access_token);
               console.log('access token:', data.access_token);
-              // 你可以在這裡進行後續操作，如重定向到其他頁面
+              
           } else {
               console.error('Access token not found in response');
           }

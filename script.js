@@ -1,7 +1,5 @@
 const apiURL="";
-
-
-// const apiURL=" https://my-loginapp2-qo754edula-uc.a.run.app";
+// const apiURL="https://my-loginapp-qo754edula-de.a.run.app";
 document.getElementById('loginForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const email = document.getElementById('email').value;
@@ -23,6 +21,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
       console.log('Access token:', data.access_token);
       localStorage.setItem('access_token', data.access_token);
       // You can now use the access token to authenticate API requests
+      window.location.href = 'https://storage.googleapis.com/jim_team_client0702/train/index.html';
     } else {
       console.error('Login failed');
     }
@@ -66,11 +65,10 @@ async function lineLogin() {
   window.location.href = apiURL+'/linelogin';
 }
 
-async function getLineToken() {
+async function getLineToken(code) {
   try {
-      const response = await fetch(apiURL + '/get-linetoken', {
+      const response = await fetch(apiURL + '/get-linetoken?linetoken='+code, {
           method: 'GET',
-          credentials: 'include'  // 確保 cookie/session 夾帶在請求中
       });
 
       if (response.ok) {
@@ -79,6 +77,8 @@ async function getLineToken() {
               // 將 access token 儲存到 localStorage
               localStorage.setItem('access_token', data.access_token);
               console.log('access token:', data.access_token);
+
+              window.location.href = 'https://storage.googleapis.com/jim_team_client0702/train/index.html';
               
           } else {
               console.error('Access token not found in response');
@@ -95,6 +95,6 @@ async function getLineToken() {
 document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.has('linetoken')) {
-      getLineToken();
+      getLineToken(urlParams.get('linetoken'));
   }
 });

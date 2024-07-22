@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Depends, Body,Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse,RedirectResponse
-from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from werkzeug.security import generate_password_hash, check_password_hash
 import uvicorn
@@ -26,6 +25,7 @@ load_dotenv()
 # Constants
 SECRET_KEY = os.getenv("LOGIN_SECRET_KEY")
 ALGORITHM = "HS256"
+LINETOKEN=os.getenv("LINETOKEN")
 # ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # GCP MySQL instance connection settings
@@ -34,7 +34,7 @@ print(f"Your instance connection name is: {INSTANCE_CONNECTION_NAME}")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 DB_NAME = "userdata"
-
+lineuser_token=""
 # initialize the connector object
 connector = Connector()
 
@@ -80,15 +80,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# 設置會話中間件，確保會話能夠工作
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 # Enable CORS
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 允許的來源
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],  # 允許所有 HTTP 方法
     allow_headers=["*"],  # 允許所有標頭
 )
@@ -353,15 +351,16 @@ async def line_callback(request:Request,code: str, state: str, friendship_status
         await register(email=user_line_email, password=user_line_id)
     
     access_token=create_access_token(data={"sub": user_line_email,"line_name":user_line_name})
-    request.session['access_token'] = access_token
-    return RedirectResponse(url=AFTERLINE_URI)
+    global lineuser_token
+    lineuser_token = access_token
+    return RedirectResponse(url=AFTERLINE_URI+LINETOKEN)
 
 @app.get("/get-linetoken",include_in_schema=False)
-async def get_token(request: Request):
-    access_token = request.session.get('access_token')
-    if not access_token:
+async def get_token(linetoken:str):
+    if linetoken == LINETOKEN:
+        return {"access_token": lineuser_token,"token_type": "bearer"}
+    else:
         raise HTTPException(status_code=404, detail="Token not found in session")
-    return {"access_token": access_token,"token_type": "bearer"}
     
 
 if __name__ == "__main__":

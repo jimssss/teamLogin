@@ -1,5 +1,5 @@
-const apiURL="";
-// const apiURL="https://my-loginapp-qo754edula-de.a.run.app";
+// const apiURL="";
+const apiURL="https://my-loginapp-qo754edula-de.a.run.app";
 document.getElementById('loginForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const email = document.getElementById('email').value;
